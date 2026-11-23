@@ -20,6 +20,7 @@
   },
   "scripts": {
     "build": "node scripts/build-data.mjs && node scripts/bundle.mjs",
+    "check": "node scripts/build-data.mjs --check",
     "test": "node test/test.mjs",
     "start": "node src/index.mjs",
     "http": "node src/index.mjs --http",

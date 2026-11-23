@@ -11,7 +11,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node: [18, 20, 22]
+        # Node 18 已 EOL（2025-04），从 20 起测
+        node: [20, 22, 24]
 
     steps:
       - uses: actions/checkout@v4
@@ -20,13 +21,15 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
 
-      # 数据必须能从 vendor/ + scripts/ 完全重建。
-      # 有人手改了 src/data.b64.mjs 却忘了改构建脚本，这里会拦住。
-      - name: 验证数据可复现
-        run: |
-          npm run build
-          git diff --exit-code src/data.b64.mjs \
-            || (echo "::error::src/data.b64.mjs 与 vendor/ 不一致，请本地跑 npm run build 后提交生成结果" && exit 1)
+      # 提交的 src/data.b64.mjs 解压后，必须能由 vendor/ + scripts/ 完全重建。
+      # 有人手改了内联数据却忘了改构建脚本，这里会拦住。
+      # 比的是解压后的内容，不是 gzip 字节——压缩流依赖 zlib 实现，跨平台不稳定，
+      # 拿字节做断言会在 macOS 提交、Linux 构建时产生假阳性。
+      - name: 验证内联数据可复现
+        run: npm run check
 
       - name: 测试三个入口
         run: npm test
+
+      - name: 打包单文件（供 CF 后台粘贴）
+        run: npm run build

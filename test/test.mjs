@@ -10,11 +10,12 @@
  */
 import assert from 'node:assert/strict';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
 import { dispatch, STATS, TOOLS } from '../src/core.mjs';
 import worker from '../src/worker.mjs';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let pass = 0;
 let fail = 0;
 

@@ -11,8 +11,10 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const ROOT = path.resolve(import.meta.dirname, '..');
+// import.meta.dirname 是 Node 20.11 才加的，这里用兼容写法，Node 18 也能跑
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const SRC = path.join(ROOT, 'vendor/kaomoji.json');
 const OUT = path.join(ROOT, 'data/kaomoji.json');
 
@@ -405,17 +407,56 @@ if (thin.length) console.log(`   ⚠️  偏少的分类: ${thin.map((c) => `${c
 /* ------------------------------------------------- 生成内联压缩数据 */
 /**
  * Worker 要能一键粘贴到 Cloudflare 后台，所以把数据 gzip + base64 内联。
- * 1,365 KB 原始 JSON → gzip 276 KB → base64 368 KB，单文件塞得下。
+ * 1,365 KB 原始 JSON → gzip 约 280 KB → base64 约 370 KB，单文件塞得下。
  */
 import zlib from 'node:zlib';
 
-const raw = fs.readFileSync(OUT);
-const gz = zlib.gzipSync(raw, { level: 9 });
-const b64 = gz.toString('base64');
+const CHECK = process.argv.includes('--check');
 const inlinePath = path.join(ROOT, 'src/data.b64.mjs');
-fs.writeFileSync(
-  inlinePath,
-  `// 自动生成，勿手改。由 scripts/build-data.mjs 从 data/kaomoji.json 压缩而来。\nexport default ${JSON.stringify(b64)};\n`,
-  'utf8'
-);
-console.log(`   gzip ${(gz.length / 1024).toFixed(0)} KB → base64 ${(b64.length / 1024).toFixed(0)} KB（内联用）`);
+const json = JSON.stringify(out);
+
+if (CHECK) {
+  // 校验模式：仓库里提交的 src/data.b64.mjs，解压后必须与刚从 vendor/ 重建的内容完全一致。
+  //
+  // 为什么不直接比压缩流的字节：gzip 输出依赖 zlib 实现，macOS 和 Linux 压出来并不相同，
+  // 拿它当断言会让 CI 在每个平台上都误报。比内容才跨平台成立。
+  if (!fs.existsSync(inlinePath)) {
+    console.error(`❌ 找不到 ${inlinePath}，先跑一次 npm run build`);
+    process.exit(1);
+  }
+  const src = fs.readFileSync(inlinePath, 'utf8');
+  const m = src.match(/export default ("(?:[^"\\]|\\.)*")/);
+  if (!m) {
+    console.error(`❌ ${inlinePath} 格式不对，找不到 export default 的 base64 字符串`);
+    process.exit(1);
+  }
+  let got;
+  try {
+    got = zlib.gunzipSync(Buffer.from(JSON.parse(m[1]), 'base64')).toString('utf8');
+  } catch (e) {
+    console.error(`❌ ${inlinePath} 解压失败：${e.message}`);
+    process.exit(1);
+  }
+  if (got !== json) {
+    console.error('❌ 内联数据与 vendor/ 不一致');
+    console.error(`   提交的：${got.length} 字符`);
+    console.error(`   重建的：${json.length} 字符`);
+    let i = 0;
+    while (i < got.length && i < json.length && got[i] === json[i]) i++;
+    console.error(`   首个差异在第 ${i} 个字符：`);
+    console.error(`     提交 ${JSON.stringify(got.slice(i, i + 60))}`);
+    console.error(`     重建 ${JSON.stringify(json.slice(i, i + 60))}`);
+    console.error('   本地跑 npm run build 后重新提交 src/data.b64.mjs');
+    process.exit(1);
+  }
+  console.log(`✅ 内联数据与 vendor/ 一致（${(got.length / 1024).toFixed(0)} KB 内容）`);
+} else {
+  const gz = zlib.gzipSync(Buffer.from(json, 'utf8'), { level: 9 });
+  const b64 = gz.toString('base64');
+  fs.writeFileSync(
+    inlinePath,
+    `// 自动生成，勿手改。由 scripts/build-data.mjs 从 data/kaomoji.json 压缩而来。\nexport default ${JSON.stringify(b64)};\n`,
+    'utf8'
+  );
+  console.log(`   gzip ${(gz.length / 1024).toFixed(0)} KB → base64 ${(b64.length / 1024).toFixed(0)} KB（内联用）`);
+}
