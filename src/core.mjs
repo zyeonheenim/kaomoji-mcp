@@ -416,10 +416,37 @@ export function dispatch(msg) {
 
 export const CORS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, Mcp-Session-Id',
+  'Access-Control-Allow-Headers': 'Content-Type, Accept, Authorization, X-MCP-Token, Mcp-Session-Id',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Expose-Headers': 'Mcp-Session-Id',
 };
+
+/**
+ * 校验调用方是否持有令牌。
+ *
+ * 三种带法都收，因为客户端能力差别很大：
+ *   · Authorization: Bearer xxx   标准做法，Kelivo/Cursor 这类支持自定义头的用
+ *   · X-MCP-Token: xxx            有些客户端只让填"密钥"字段，不给改 header 名
+ *   · ?token=xxx                  手机客户端基本都只让填一个 URL，最保险的一条路
+ *
+ * 没设 MCP_TOKEN 就是公开实例，一律放行。
+ */
+export function checkToken(request, expected) {
+  if (!expected) return true;
+  const given = [
+    (request.headers.get('authorization') || '').replace(/^Bearer\s+/i, '').trim(),
+    (request.headers.get('x-mcp-token') || '').trim(),
+    (new URL(request.url).searchParams.get('token') || '').trim(),
+  ];
+  // 定时比较，避免通过响应时间逐位试出令牌
+  return given.some((g) => g.length === expected.length && safeEqual(g, expected));
+}
+
+function safeEqual(a, b) {
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 export function jsonResponse(obj, status = 200) {
   return new Response(JSON.stringify(obj), {
@@ -429,7 +456,7 @@ export function jsonResponse(obj, status = 200) {
 }
 
 /** 首页：给人看的说明，省得点开一片空白 */
-export function homePage(endpoint, repoUrl) {
+export function homePage(endpoint, repoUrl, needToken = false) {
   const sample = CATS.slice(0, 14)
     .map((c) => `<li><b>${c.zh}</b> <code>${c.id}</code> · ${c.items.length} 条 · ${clean(c.sample)}</li>`)
     .join('');
@@ -446,6 +473,13 @@ a{color:#0b6bcb}</style>
 <h3>接进客户端</h3>
 <p>Claude / Cursor / Kelivo / Cherry Studio 里添加远程 MCP，填这个地址：</p>
 <pre>${endpoint || '/mcp'}</pre>
+${
+    needToken
+      ? `<p style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.7;margin:10px 0">
+本实例已启用令牌校验。地址末尾加 <code>?token=你的令牌</code>，或请求头带
+<code>Authorization: Bearer 你的令牌</code>。没带令牌会返回 401。</p>`
+      : ''
+  }
 <p>工具：<code>pick_kaomoji</code> · <code>search_kaomoji</code> · <code>decorate</code> · <code>list_categories</code></p>
 <h3>分类示例</h3><ul>${sample}</ul>
 <p style="color:#888;font-size:12px;margin-top:32px">颜文字数据来自

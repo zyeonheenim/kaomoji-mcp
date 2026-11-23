@@ -1,8 +1,8 @@
 # kaomoji-mcp
 
-**给 AI 一个「按心情挑颜文字」的能力。22,408 条颜文字，38 个情绪分类，零依赖。**
+**给 AI 一个「按心情挑颜文字」的能力。22,364 条颜文字，38 个情绪分类，零依赖。**
 
-An MCP server that picks kaomoji by mood — 22,408 emoticons across 38 emotion categories, zero dependencies.
+An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion categories, zero dependencies.
 
 <h3 align="center">👇 手机 / 平板用户（Kelivo、Claude App、Cherry Mobile）从这里开始</h3>
 
@@ -110,9 +110,11 @@ Render 部署完 → https://<你的服务>.onrender.com/mcp
 |---|---|
 | 类型 / 传输 | **Streamable HTTP**（不要选 STDIO） |
 | 地址 / URL | 上面那个 `/mcp` 结尾的地址 |
-| 认证 | 留空。想只给自己用就设 `MCP_TOKEN`，再填 `Authorization: Bearer <那个串>` |
+| 认证 | 留空就是谁都能连。要锁上：设环境变量 `MCP_TOKEN`，然后把地址写成 `.../mcp?token=<你的串>` |
 
 **不用买域名。** 平台给的免费子域够用，想绑自己的域名是后话。
+
+> 自己用的实例建议加令牌——地址是猜得到的（`项目名.vercel.app`），不加等于公开。Vercel 上加完变量**必须 Redeploy** 才生效。详见 [DEPLOY.md](DEPLOY.md#加个门只给自己用)。
 
 > Render 免费版 15 分钟没请求会休眠，下次唤醒几秒冷启动。Vercel 只会按请求冷启动（有预热，通常一两百毫秒），不像 Render 那样固定休眠；但 Hobby 条款限「个人非商业」用途。两边都免费，按在意什么挑。
 
@@ -136,7 +138,7 @@ node src/index.mjs --http --port 9000 --host 127.0.0.1
 
 HTTP 模式同时支持两种传输：`POST /mcp`（Streamable HTTP）和 `GET /sse`（老式 SSE）。手机跟电脑不在同一网络时，可以走 [Tailscale](https://tailscale.com) 的 100.x 地址，不用暴露到公网。
 
-设了 `MCP_TOKEN` 环境变量就会校验凭证（`Authorization: Bearer <token>` 或 `?token=`）。
+设了 `MCP_TOKEN` 环境变量就会校验凭证，三种带法都认：`Authorization: Bearer <令牌>`、`X-MCP-Token: <令牌>`、`?token=<令牌>`。不带就 401，`/health` 和首页也一起挡住。
 
 其他平台也行：Railway / Zeabur / Fly.io 直接识别 `Dockerfile`；Cloudflare Workers 用 `wrangler deploy`（仓库里有 `wrangler.toml`），或者把 `dist/worker.js` 单文件粘进后台。
 
@@ -163,9 +165,9 @@ search_kaomoji(query: "♡")
 
 | 档位 | 判定 | 条数 |
 |---|---|---|
-| `clean` | 结构简单、任何客户端都不糊（默认） | 14,186 |
-| `fancy` | 更花哨，依赖字体 | 3,674 |
-| `heavy` | 长或组合符多，容易糊 | 4,548 |
+| `clean` | 结构简单、任何客户端都不糊（默认） | 14,185 |
+| `fancy` | 更花哨，依赖字体 | 3,670 |
+| `heavy` | 长或组合符多，容易糊 | 4,509 |
 
 默认只给 `clean`。想要好看的用 `fancy` 或 `clean+fancy`，`any` 全给。另外每个分类只从质量前 60% 里抽——长尾真的很难看。
 
@@ -197,7 +199,7 @@ Cloudflare 想省掉装 wrangler 的话：`npm run build` 会生成 `dist/worker
 ```bash
 npm run build   # vendor/kaomoji.json → src/data.b64.mjs（+ dist/worker.js）
 npm run check   # 验证提交的内联数据能由 vendor/ 完全重建
-npm test        # 30 项，覆盖核心 / Worker / Vercel / stdio 四条入口
+npm test        # 39 项，覆盖核心 / Worker / 令牌 / Vercel / stdio 五条线
 ```
 
 `src/` 分层：

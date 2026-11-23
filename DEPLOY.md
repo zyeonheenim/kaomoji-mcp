@@ -156,23 +156,37 @@ npm run build     # 生成 dist/worker.js，自包含单文件
 
 ## 加个门（只给自己用）
 
-开放式部署谁都连得上，被脚本刷了额度就爆。设个 token 挡住：
+开放式部署谁都连得上，被脚本刷了额度就爆——而且地址本身是猜得到的（`项目名.vercel.app`）。设个令牌挡住：
+
+| 平台 | 怎么设 |
+|---|---|
+| Vercel | Settings → Environment Variables → 加 `MCP_TOKEN=随机长串` → **必须 Redeploy 一次**（环境变量只在构建时注入，不重新部署不生效） |
+| Render | Dashboard → Environment → 加 `MCP_TOKEN`，服务会自动重启 |
+| Docker | `-e MCP_TOKEN=随机长串` |
+| Cloudflare | `wrangler secret put MCP_TOKEN` |
+
+然后客户端用下面**任意一种**方式带令牌（三种服务端都认）：
+
+| 带法 | 写法 | 什么时候用 |
+|---|---|---|
+| 拼在地址里 | `https://xxx.vercel.app/mcp?token=你的串` | **手机客户端首选**——Kelivo、Rikki 这类基本只让填一个 URL |
+| 标准头 | `Authorization: Bearer 你的串` | 支持自定义请求头的桌面客户端 |
+| 短头 | `X-MCP-Token: 你的串` | 有些客户端只给一个"密钥"输入框，却不让改 header 名 |
+
+设好之后：
+
+- 不带令牌，`/mcp`、`/health`、首页全部返回 **401**
+- 带令牌打开首页，页面会直接告诉你「本实例已启用令牌校验」
+- 预检请求（`OPTIONS`）不校验，否则浏览器端全废
+- 令牌在 `?token=` 里会落到访问日志，自己用无所谓；要更干净就用 `Authorization` 头
+
+生成一个随机串：
 
 ```bash
-# Docker
--e MCP_TOKEN=随机长串
-
-# Vercel / Render
-在项目设置里加环境变量 MCP_TOKEN
+openssl rand -hex 16
 ```
 
-然后客户端那边加请求头：
-
-```
-Authorization: Bearer 你的随机长串
-```
-
-或者地址后面加 `?token=你的随机长串`。不设这个变量就是谁都能连，自己判断。
+> 令牌别写进仓库、别贴进 README。写成占位符 `<你的令牌>` 就行。
 
 ---
 
@@ -181,7 +195,8 @@ Authorization: Bearer 你的随机长串
 | 现象 | 原因 | 怎么办 |
 |---|---|---|
 | 404 | 地址少了 `/mcp` | Vercel 是 `/mcp` 或 `/api/mcp`，Render 是 `/mcp` |
-| 401 | 设了 `MCP_TOKEN` 但客户端没带 | 加 `Authorization: Bearer <串>` |
+| 401 | 设了 `MCP_TOKEN` 但没带凭证，或 Vercel 加了变量却没 Redeploy | 地址后加 `?token=<串>`，或 `Authorization: Bearer <串>` |
+| 加了 `MCP_TOKEN` 还是谁都能连 | Vercel 环境变量只在构建时注入，改完必须 Redeploy | Deployments → 最新 → Redeploy（取消勾选 Use existing build cache） |
 | 客户端说传输不支持 | 类型选成了 STDIO | 远程一律选 **Streamable HTTP** |
 | 第一次调用很慢 | Render 免费版休眠唤醒 | 正常，之后就快了 |
 | Vercel 部署报体积超限 | 极少见（本服务约 400 KB） | 改用 Render 或 Docker |

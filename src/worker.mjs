@@ -6,7 +6,7 @@
  *
  * 部署：wrangler deploy / Vercel Edge（api/mcp.mjs）/ Docker，三者共用这一份。
  */
-import { dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
+import { checkToken, dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
 const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
 
@@ -22,12 +22,12 @@ export default {
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
-    // 可选 token 保护：设置了 MCP_TOKEN 就只放行带凭证的请求
-    if (env.MCP_TOKEN) {
-      const h = request.headers.get('authorization') || '';
-      if (h !== `Bearer ${env.MCP_TOKEN}` && url.searchParams.get('token') !== env.MCP_TOKEN) {
-        return jsonResponse({ error: '未授权' }, 401);
-      }
+    // 可选令牌保护：设了 MCP_TOKEN 就只放行带凭证的请求（CORS 预检在上一行已放行）
+    if (!checkToken(request, env.MCP_TOKEN)) {
+      return jsonResponse(
+        { error: '未授权', hint: '在地址末尾加 ?token=你的令牌，或用 Authorization: Bearer 你的令牌' },
+        401
+      );
     }
 
     if (url.pathname === '/health') {
@@ -37,8 +37,13 @@ export default {
     // 首页：端点地址按实际部署位置推导，别人部署后不会显示成作者的域名
     if ((url.pathname === '/' || url.pathname === '/api/mcp') && request.method === 'GET') {
       const endpoint = env.ENDPOINT_HINT || `${url.origin}/mcp`;
-      return new Response(homePage(endpoint, REPO), {
-        headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+      return new Response(homePage(endpoint, REPO, Boolean(env.MCP_TOKEN)), {
+        headers: {
+          ...CORS,
+          'Content-Type': 'text/html; charset=utf-8',
+          // 开了令牌就是私人页面，别让 CDN 缓存后绕过校验发给别人
+          'Cache-Control': env.MCP_TOKEN ? 'private, no-store' : 'public, max-age=3600',
+        },
       });
     }
 

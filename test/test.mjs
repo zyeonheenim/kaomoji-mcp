@@ -203,6 +203,57 @@ await t('OPTIONS 预检与 404 兜底', async () => {
   assert.equal((await fetchWorker('/nope')).status, 404);
 });
 
+/* ---------------------------------------------------- 2b. 令牌保护 */
+
+console.log('\n令牌保护');
+
+const SECRET = 'test-secret-1234567890';
+const withToken = async (p, init, token = SECRET) => {
+  const res = await worker.fetch(new Request('https://kaomoji.test' + p, init), { MCP_TOKEN: token }, {});
+  return { status: res.status, headers: res.headers, body: await res.text() };
+};
+const bodyOf = { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }) };
+
+await t('设了 MCP_TOKEN 后，不带凭证一律 401', async () => {
+  assert.equal((await withToken('/mcp', bodyOf)).status, 401);
+  assert.equal((await withToken('/health')).status, 401);
+  assert.equal((await withToken('/')).status, 401);
+});
+
+await t('?token= 能过（手机客户端唯一能填的形式）', async () => {
+  assert.equal((await withToken(`/mcp?token=${SECRET}`, bodyOf)).status, 200);
+});
+
+await t('Authorization: Bearer 能过', async () => {
+  const init = { ...bodyOf, headers: { ...bodyOf.headers, Authorization: `Bearer ${SECRET}` } };
+  assert.equal((await withToken('/mcp', init)).status, 200);
+});
+
+await t('X-MCP-Token 能过', async () => {
+  const init = { ...bodyOf, headers: { ...bodyOf.headers, 'X-MCP-Token': SECRET } };
+  assert.equal((await withToken('/mcp', init)).status, 200);
+});
+
+await t('错误的令牌被拒，且不因长度不同而崩', async () => {
+  assert.equal((await withToken('/mcp?token=wrong')).status, 401);
+  assert.equal((await withToken(`/mcp?token=${SECRET}x`)).status, 401);
+});
+
+await t('OPTIONS 预检不需要令牌（否则浏览器端全废）', async () => {
+  assert.equal((await withToken('/', { method: 'OPTIONS' })).status, 204);
+});
+
+await t('首页提示怎么带令牌，且不允许缓存', async () => {
+  const r = await withToken(`/?token=${SECRET}`);
+  assert.equal(r.status, 200);
+  assert.match(r.body, /\?token=/, '应告诉用户地址后面加 ?token=');
+  assert.match(r.headers.get('cache-control'), /no-store/, '私人页面不能被 CDN 缓存后绕过校验');
+});
+
+await t('没设 MCP_TOKEN 时不加限制（公开实例不受影响）', async () => {
+  assert.equal((await fetchWorker('/mcp', bodyOf)).status, 200);
+});
+
 /* -------------------------------------------------------- 3. Vercel */
 
 console.log('\nVercel');
@@ -254,6 +305,32 @@ await t('Node 形态的相对路径能补成绝对 URL，端点按部署域名�
   assert.equal(r.status, 200);
   assert.match(r.body, /demo\.vercel\.app\/mcp/, '应显示部署者自己的域名');
   assert.ok(!r.body.includes('zyeonheenim.stream'), '不该出现作者域名');
+});
+
+await t('Vercel 上设 MCP_TOKEN 真能生效（env 要显式传进 worker）', async () => {
+  // 这条守着一个踩过的坑：适配层曾经只传 ENDPOINT_HINT，process.env.MCP_TOKEN 到不了
+  // worker 的 env，于是环境变量设了也等于没设，实例依然是公开的。
+  const prev = process.env.MCP_TOKEN;
+  process.env.MCP_TOKEN = 'vercel-secret-abc';
+  try {
+    const denied = await callNode({ body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }) });
+    assert.equal(denied.status, 401, '没带令牌应被拒');
+
+    const ok = await callNode({
+      path: '/mcp?token=vercel-secret-abc',
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+    });
+    assert.equal(ok.status, 200, '带 ?token= 应放行');
+
+    const viaHeader = await callNode({
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'ping' }),
+      headers: { authorization: 'Bearer vercel-secret-abc' },
+    });
+    assert.equal(viaHeader.status, 200, '带 Authorization 头应放行');
+  } finally {
+    if (prev === undefined) delete process.env.MCP_TOKEN;
+    else process.env.MCP_TOKEN = prev;
+  }
 });
 
 await t('Node 形态能透传请求头与预解析过的 body', async () => {

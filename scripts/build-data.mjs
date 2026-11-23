@@ -289,6 +289,16 @@ function stripInvisible(s) {
   return s.replace(INVISIBLE, '');
 }
 
+/**
+ * 去掉 C0 控制字符（\u0000-\u001F、\u007F）。
+ *
+ * 源数据里混进了 \u0005 这种不可见的残留：`( ´ ▽ ` )｡.:♡` 里就藏了一个。
+ * 它不占视觉宽度，但会让某些客户端把整段当二进制处理，或被前端转义成乱码。
+ */
+function stripControl(s) {
+  return s.replace(/[\u0000-\u001F\u007F]/g, '');
+}
+
 function gradeQuality(s) {
   const combining = (s.match(COMBINING) || []).length;
   const len = [...s].length;
@@ -358,8 +368,14 @@ for (const m of MOODS) {
       const t = stripInvisible(decodeHtml(String(raw))).trim();
       // 解码后还残留实体（嵌套的 &amp;gt; 之类）就不要了，发出去照样难看
       if (!t || /&(#x?[0-9a-f]+|[a-z]+);/i.test(t) || seen.has(t)) continue;
-      seen.add(t);
-      items.push({ t, q: gradeQuality(t), s: scoreItem(t), g: extractTags(t).join(',') });
+      // 多行的是 ASCII 画（墓地、小人），不是能贴在句尾的颜文字，塞进聊天会撑破排版
+      if (t.includes('\n')) continue;
+      const cleaned = stripControl(t);
+      if (!cleaned) continue;
+      const text = cleaned;
+      if (seen.has(text)) continue;
+      seen.add(text);
+      items.push({ t: text, q: gradeQuality(text), s: scoreItem(text), g: extractTags(text).join(',') });
     }
   }
   items.sort((a, b) => b.s - a.s);

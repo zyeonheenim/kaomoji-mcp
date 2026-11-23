@@ -12,7 +12,7 @@
 import readline from 'node:readline';
 import http from 'node:http';
 import os from 'node:os';
-import { dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
+import { checkToken, dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
 const TOKEN = process.env.MCP_TOKEN || '';
 const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
@@ -75,11 +75,11 @@ async function runHttp(port, host) {
       return res.end();
     }
 
-    if (TOKEN) {
-      const h = req.headers.authorization || '';
-      if (h !== `Bearer ${TOKEN}` && url.searchParams.get('token') !== TOKEN) {
-        return pipe(res, jsonResponse({ error: '未授权：需要 Bearer token 或 ?token=' }, 401));
-      }
+    if (!checkToken({ headers: new Headers(req.headers), url: url.href }, TOKEN)) {
+      return pipe(
+        res,
+        jsonResponse({ error: '未授权', hint: '在地址末尾加 ?token=你的令牌，或用 Authorization: Bearer 你的令牌' }, 401)
+      );
     }
 
     if (url.pathname === '/health') {
@@ -89,7 +89,7 @@ async function runHttp(port, host) {
     if (url.pathname === '/' && req.method === 'GET') {
       const endpoint = `http://${req.headers.host || `127.0.0.1:${port}`}/mcp`;
       res.writeHead(200, { ...CORS, 'Content-Type': 'text/html; charset=utf-8' });
-      return res.end(homePage(endpoint, REPO));
+      return res.end(homePage(endpoint, REPO, Boolean(TOKEN)));
     }
 
     /* --- Streamable HTTP --- */

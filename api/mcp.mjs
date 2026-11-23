@@ -69,7 +69,13 @@ export default async function handler(req, res) {
   }
 
   const origin = new URL(request.url).origin;
-  const response = await worker.fetch(request, { ENDPOINT_HINT: `${origin}/mcp` });
+  // 平台环境变量要显式传进去：Worker 的 env 是第二个参数，不像 Node 能读 process.env。
+  // 之前漏了这一行，MCP_TOKEN 在 Vercel 上设了也不生效。
+  const env = { ENDPOINT_HINT: `${origin}/mcp` };
+  const token = typeof process !== 'undefined' ? process.env?.MCP_TOKEN : undefined;
+  if (token) env.MCP_TOKEN = token;
+
+  const response = await worker.fetch(request, env);
 
   if (!isNode) return response;
 
