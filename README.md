@@ -6,6 +6,12 @@ An MCP server that picks kaomoji by mood — 22,408 emoticons across 38 emotion 
 
 [![CI](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml)
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/zyeonheenim/kaomoji-mcp)
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp)
+
+> **没有官方公共实例。** 这个项目只提供代码，不替所有人付服务器账单。
+> 手机端的远程 MCP 需要你自己部署一个——点上面任意一个按钮，两分钟，用你自己的免费额度，不用买域名。
+
 ---
 
 ## 它解决什么问题
@@ -42,19 +48,15 @@ decorate("今天被夸了有点飘嘿嘿")
    也像：害羞（shy）
 ```
 
-## 三种接法
+## 怎么用
 
-### ① 远程，零安装
+| 你的情况 | 走哪条 | 部署成本 |
+|---|---|---|
+| 桌面客户端（Claude Desktop / Cherry / Cursor） | **① npx**，进程跑在你本机 | 零部署 |
+| 手机 / 平板客户端（Kelivo / RikkaHub） | **② 自己一键部署**，拿到一个 HTTPS 地址 | 点一下按钮 |
+| 有服务器 / 喜欢掌控 | **③ Docker 或源码** | 你自己的机器 |
 
-支持远程 MCP（Streamable HTTP）的客户端，直接填这个地址：
-
-```
-https://kaomoji.zyeonheenim.stream/mcp
-```
-
-Claude 网页版/手机版的自定义连接器、Kelivo、Cursor 都吃这一套。
-
-### ② 本机 stdio
+### ① 本机 stdio —— 桌面端最省事
 
 ```bash
 npx -y kaomoji-mcp-server
@@ -79,7 +81,38 @@ Claude Code 一条命令：
 claude mcp add kaomoji -- npx -y kaomoji-mcp-server
 ```
 
-### ③ 源码跑
+这条路不需要任何服务器、任何账号。缺点只有一个：手机客户端启动不了你电脑上的进程，那边得用远程方式。
+
+### ② 远程 —— 部署一个自己的实例
+
+手机上（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址。点顶部的 **Deploy with Vercel** 或 **Deploy to Render**，用你自己的账号：
+
+```
+Vercel 部署完 → https://<你的项目>.vercel.app/mcp
+Render 部署完 → https://<你的服务>.onrender.com/mcp
+```
+
+然后在客户端里「添加远程 MCP 服务器」：
+
+| 字段 | 填什么 |
+|---|---|
+| 类型 / 传输 | **Streamable HTTP**（不要选 STDIO） |
+| 地址 / URL | 上面那个 `/mcp` 结尾的地址 |
+| 认证 | 留空。想只给自己用就设 `MCP_TOKEN`，再填 `Authorization: Bearer <那个串>` |
+
+**不用买域名。** 平台给的免费子域够用，想绑自己的域名是后话。
+
+> Render 免费版 15 分钟没请求会休眠，下次唤醒几秒冷启动。Vercel 的 Edge 函数不会睡，但 Hobby 条款限「个人非商业」用途。两边都免费，按在意什么挑。
+
+### ③ 自己的机器 —— Docker 或源码
+
+```bash
+docker build -t kaomoji-mcp .
+docker run -p 8080:8080 kaomoji-mcp
+# → http://127.0.0.1:8080/mcp
+```
+
+或者不装 Docker：
 
 ```bash
 git clone https://github.com/zyeonheenim/kaomoji-mcp.git
@@ -89,9 +122,11 @@ node src/index.mjs --http          # HTTP，默认 0.0.0.0:8790
 node src/index.mjs --http --port 9000 --host 127.0.0.1
 ```
 
-HTTP 模式同时支持两种传输：`POST /mcp`（Streamable HTTP）和 `GET /sse`（老式 SSE）。手机、平板跟电脑不在同一网络时，可以走 [Tailscale](https://tailscale.com) 的 100.x 地址。
+HTTP 模式同时支持两种传输：`POST /mcp`（Streamable HTTP）和 `GET /sse`（老式 SSE）。手机跟电脑不在同一网络时，可以走 [Tailscale](https://tailscale.com) 的 100.x 地址，不用暴露到公网。
 
 设了 `MCP_TOKEN` 环境变量就会校验凭证（`Authorization: Bearer <token>` 或 `?token=`）。
+
+其他平台也行：Railway / Zeabur / Fly.io 直接识别 `Dockerfile`；Cloudflare Workers 用 `wrangler deploy`（仓库里有 `wrangler.toml`），或者把 `dist/worker.js` 单文件粘进后台。
 
 ## 四个工具
 
@@ -128,40 +163,40 @@ search_kaomoji(query: "♡")
 
 `decorate` 信号不足时不会硬猜：早期版本把「加班回家一个人」配成了「加油」，语义直接反了。现在会明说没读到情绪，给几条通用款，让你改用 `pick_kaomoji`。
 
-## 自建部署
+## 各平台跑法对照
 
-### Cloudflare Worker（免费额度每天 10 万请求）
+同一个 `core.mjs`，四种外壳。想换平台不用改逻辑，只换入口那几十行。
 
-```bash
-npm install -g wrangler
-wrangler deploy
-```
+| 平台 | 入口 | 传输能力 | 备注 |
+|---|---|---|---|
+| Vercel | `api/mcp.mjs`（Edge Runtime） | Streamable HTTP | 无状态，`/mcp` 由 `vercel.json` 重写到 `/api/mcp`；Hobby 条款限个人非商业 |
+| Render / Railway / Zeabur / VPS | `Dockerfile` | HTTP + 老式 SSE | 真进程，长连接可用；Render 免费版会休眠 |
+| Cloudflare Workers | `src/worker.mjs` | Streamable HTTP | 免费额度每天 10 万请求；仓库带 `wrangler.toml` |
+| 本机 | `src/index.mjs` | stdio / HTTP / SSE | 三种全支持 |
 
-`wrangler.toml` 里改 `name` 和 `routes` 成你自己的域名。日常没有依赖，Worker 体积约 390 KB（未过 1 MB 的免费上限）。
+Cloudflare 想省掉装 wrangler 的话：`npm run build` 会生成 `dist/worker.js`——自包含单文件，粘进后台就能跑。
 
-### 或者不装任何工具
-
-```bash
-npm run build
-```
-
-生成 `dist/worker.js`——一个自包含的单文件（数据 gzip + base64 内联）。打开 Cloudflare 后台 → Workers & Pages → 创建 Worker → 编辑代码 → 全选粘贴 → 部署。
+> 想加访问控制就在环境变量里设 `MCP_TOKEN`。三个入口都认，不设就是谁都能连。
 
 ## 开发
 
 ```bash
 npm run build   # vendor/kaomoji.json → src/data.b64.mjs（+ dist/worker.js）
-npm test        # 25 项，覆盖核心/Worker/stdio 三条入口
+npm run check   # 验证提交的内联数据能由 vendor/ 完全重建
+npm test        # 28 项，覆盖核心 / Worker / Edge / stdio 四条入口
 ```
 
 `src/` 分层：
 
 | 文件 | 职责 |
 |---|---|
-| `core.mjs` | 数据派生、情绪路由、四个工具、JSON-RPC 分发。平台无关 |
-| `data.mjs` | 解压加载内联数据 |
-| `worker.mjs` | Cloudflare Worker 入口（fetch handler） |
-| `index.mjs` | Node 入口（stdio + HTTP） |
+| `core.mjs` | 数据派生、情绪路由、四个工具、JSON-RPC 分发。**平台无关**，只用 Web 标准 API |
+| `data.mjs` | 解压加载内联数据（`DecompressionStream`，Node 和边缘运行时通吃） |
+| `worker.mjs` | fetch handler 外壳：CF Worker、Vercel Edge 都走这里 |
+| `index.mjs` | Node 外壳：stdio + HTTP（含老式 SSE） |
+| `api/mcp.mjs` | Vercel Edge 适配层，就十几行 |
+
+平台无关那层是关键：`core.mjs` 里没有一行 `node:` 导入，所以同一个文件能在 Worker、Vercel Edge、Deno、Node 上直接跑。这也是为什么加一个平台只需要写个十几行的外壳。
 
 `src/data.b64.mjs` 是构建产物但**入库**了：这样 clone 下来不用 build 就能跑。CI 会验证它和 `vendor/` 一致，手改会被拦。
 

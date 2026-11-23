@@ -1,18 +1,20 @@
 /**
- * Cloudflare Worker 入口
+ * Cloudflare Worker / 任何 fetch 风格运行时的入口
  *
  * Workers 无常驻进程，SSE 长连接要 Durable Objects，不值当——所以这里只走
  * Streamable HTTP，且完全无状态：每次请求独立处理。
  *
- * 部署：wrangler deploy，或者把 dist/worker.js（单文件版）粘进 Cloudflare 后台。
+ * 部署：wrangler deploy / Vercel Edge（api/mcp.mjs）/ Docker，三者共用这一份。
  */
 import { dispatch, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
-const ENDPOINT = 'https://kaomoji.zyeonheenim.stream/mcp';
 const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
 
+/** MCP 端点候选路径。/api/mcp 是为了 Vercel 这类把函数挂在 /api 下的平台 */
+const MCP_PATHS = new Set(['/mcp', '/', '/api/mcp']);
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env = {}) {
     const url = new URL(request.url);
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -29,14 +31,16 @@ export default {
       return jsonResponse({ ok: true, ...STATS, version: VERSION });
     }
 
-    if (url.pathname === '/' && request.method === 'GET') {
-      return new Response(homePage(ENDPOINT, REPO), {
+    // 首页：端点地址按实际部署位置推导，别人部署后不会显示成作者的域名
+    if ((url.pathname === '/' || url.pathname === '/api/mcp') && request.method === 'GET') {
+      const endpoint = env.ENDPOINT_HINT || `${url.origin}/mcp`;
+      return new Response(homePage(endpoint, REPO), {
         headers: { ...CORS, 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
       });
     }
 
     // 规范路径是 POST /mcp；根路径也接受，省得客户端少打一段就报错
-    if ((url.pathname === '/mcp' || url.pathname === '/') && request.method === 'POST') {
+    if (MCP_PATHS.has(url.pathname) && request.method === 'POST') {
       let raw;
       try {
         raw = await request.text();

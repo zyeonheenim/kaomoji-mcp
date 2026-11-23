@@ -1,122 +1,190 @@
-# 部署与上架
+# 部署指南
 
-代码写好了，剩下三件事：推上去、绑域名、上 Registry。前两件是必须的，第三件是「被搜到」的关键。
+手机 / 平板上的 MCP 客户端（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址，
+所以那边需要一个部署好的实例。桌面客户端不用看这里，直接 `npx -y kaomoji-mcp-server` 就完事。
 
-## 一、部署
+**先选路：**
 
-### 方式 A：粘贴（不用装任何东西）
+| 你有 | 走这条 | 花多久 |
+|---|---|---|
+| 什么都没有，就想两分钟内用上 | [Vercel](#vercel最快) | 2 分钟 |
+| 想要个不会睡着的 | [Render](#render) | 5 分钟 |
+| 有台常开的电脑 / NAS / 服务器 | [Docker](#docker--任何有-docker-的机器) | 3 分钟 |
+| 只想自己的设备能连，不想暴露到公网 | [Tailscale](#tailscale只给自己用) | 1 分钟 |
+| 已经在用 Cloudflare | [Workers](#cloudflare-workers) | 3 分钟 |
 
-```bash
-npm run build        # 生成 dist/worker.js
+---
+
+## 先说清楚：成本落在谁身上
+
+这个项目**不提供官方公共实例**。作者不替所有人的请求付账单，所以：
+
+- 你部署，跑在**你的**账号、**你的**免费额度上
+- 免费额度用完，是你那边被限流，不是作者的
+- 被脚本刷了，也是你那边爆——所以[建议设个 token](#加个门只给自己用)
+
+这不是抠门，是开源项目能长期活下去的常见做法：代码共享，运行成本各自承担。
+
+---
+
+## Vercel（最快）
+
+### 步骤
+
+1. 点 README 顶部的 **Deploy with Vercel**，或者直接打开：
+   ```
+   https://vercel.com/new/clone?repository-url=https://github.com/zyeonheenim/kaomoji-mcp
+   ```
+2. 用 GitHub 账号登录，Vercel 会把这个仓库复制一份到你名下
+3. 项目名随便起，Framework Preset 保持默认，直接 **Deploy**
+4. 一分钟左右完成，得到一个 `https://<项目名>.vercel.app`
+
+### 地址
+
+```
+https://<项目名>.vercel.app/mcp
 ```
 
-1. Cloudflare 后台 → **Workers & Pages** → **Create** → **Worker**
-2. 名字填 `kaomoji-mcp`
-3. **Edit code**，把编辑器里的示例代码全选删掉
-4. 打开 `dist/worker.js`（约 393 KB），全选复制，粘进去
-5. 右上角 **Deploy**
+`vercel.json` 已经把 `/mcp` 重写到 `/api/mcp`，两个地址都能用。浏览器打开根路径能看到状态页，
+上面显示的是你自己的域名——不是作者的。
 
-> 这个文件是自包含的：数据 gzip+base64 内联在代码里，不需要额外上传什么。
+### 验证部署成功
 
-### 方式 B：wrangler（命令行，适合反复改）
+```bash
+curl -s -X POST https://<项目名>.vercel.app/mcp \
+  -H 'Content-Type: application/json' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"pick_kaomoji","arguments":{"mood":"开心","count":3}}}' \
+  | head -c 300
+```
+
+看到一堆颜文字就成了。
+
+### 要注意
+
+- **Hobby 条款限「个人非商业用途」。** 自己用、给朋友用没问题；要是拿它做收费产品的一部分，条款上得升 Pro。
+- **Edge Runtime 不支持老式 SSE**（`GET /sse` 那种挂连接等推送的）。Streamable HTTP 够用，现在主流客户端都吃这套。
+- `vercel.app` 在大陆网络下时好时坏。真要稳定就绑自己的域名，在 Vercel 那边加就行，不用动别处。
+
+---
+
+## Render
+
+1. 点 README 里的 **Deploy to Render**，或打开：
+   ```
+   https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp
+   ```
+2. 登录 Render，它会读仓库里的 `render.yaml` 自动建服务
+3. 等 Docker 构建完（第一次两三分钟），得到 `https://<服务名>.onrender.com`
+4. 地址是 `https://<服务名>.onrender.com/mcp`
+
+### 要注意
+
+- **免费版 15 分钟没请求会休眠**，下次唤醒有几秒冷启动。第一次调用慢一下是正常的，不是坏了。
+- 真进程，所以 `GET /sse` 老式传输也能用。
+
+---
+
+## Docker / 任何有 Docker 的机器
+
+```bash
+git clone https://github.com/zyeonheenim/kaomoji-mcp.git
+cd kaomoji-mcp
+docker build -t kaomoji-mcp .
+docker run -d -p 8080:8080 --name kaomoji kaomoji-mcp
+```
+
+地址：`http://<机器地址>:8080/mcp`
+
+镜像很小——零依赖，不需要 `npm install`，里面只有 Node 运行时和几十 KB 源码。
+
+Railway / Zeabur / Fly.io / 群晖 / 树莓派都一样：识别到 `Dockerfile` 就能跑。
+
+想加个 token：
+
+```bash
+docker run -d -p 8080:8080 -e MCP_TOKEN=你的随机串 kaomoji-mcp
+```
+
+---
+
+## Tailscale（只给自己用）
+
+不想暴露到公网、但手机和电脑不在同一个 WiFi 时，这条路最省事，而且不需要任何云服务。
+
+在跑服务的机器上：
+
+```bash
+node src/index.mjs --http --port 8790
+tailscale ip -4        # 记下这个 100.x 地址
+```
+
+手机上也装 Tailscale 并登录同一个账号，客户端里填：
+
+```
+http://100.x.x.x:8790/mcp
+```
+
+不用域名、不用备案、不用开端口。缺点就是服务那台机器得开着。
+
+如果想让**不在你 tailnet 里的人**也能临时连，可以用 `tailscale funnel 8790` 拿到一个
+`https://<你的机器>.<tailnet>.ts.net` 的公网地址。注意 Funnel 是 beta、带宽上限不公开，
+适合临时分享，不适合当长期公共服务。
+
+---
+
+## Cloudflare Workers
 
 ```bash
 npm install -g wrangler
-wrangler login            # 浏览器授权一次
-npm run build
+wrangler login
 wrangler deploy
 ```
 
-`wrangler.toml` 里已经配好自定义域，部署时自动绑上。
+`wrangler.toml` 里的 `name` 和 `routes` 改成你自己的，否则会跟别人的部署撞名。
 
-## 二、绑域名
-
-workers.dev 那个域名在部分网络下连不上，所以要用自己的：
-
-1. Workers 项目 → **Settings** → **Domains & Routes** → **Add** → **Custom domain**
-2. 填 `kaomoji.zyeonheenim.stream`
-3. 前提：`zyeonheenim.stream` 这个 zone 在同一个 Cloudflare 账号下（已经在，之前配过 gemini-relay）
-
-端点就是 `https://kaomoji.zyeonheenim.stream/mcp`。
-
-## 三、验证
+不想装 wrangler：
 
 ```bash
-curl -s https://kaomoji.zyeonheenim.stream/health
-
-curl -s -X POST https://kaomoji.zyeonheenim.stream/mcp \
-  -H 'Content-Type: application/json' \
-  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call",
-       "params":{"name":"pick_kaomoji","arguments":{"mood":"开心","count":3}}}'
+npm run build     # 生成 dist/worker.js，自包含单文件
 ```
 
-## 四、上架 MCP Registry
+然后 Cloudflare 后台 → Workers & Pages → 创建 → 编辑代码 → 全选粘贴 → 部署。
 
-Registry 只存元数据、不存代码，免费、无审核。发布后 Glama、PulseMCP、VS Code 的 `@mcp` 市场会自动同步。
+免费额度每天 10 万请求。Worker 体积约 390 KB，在 1 MB 免费上限内。
 
-**开源带来的最大简化**：命名空间可以用 GitHub 认证（`io.github.zyeonheenim/kaomoji`），不用再折腾 DNS TXT 记录。这是不开源时走不了的路。
+---
 
-### 前置：npm 包必须先发布
+## 加个门（只给自己用）
 
-Registry 会去 npm 拉你做引用的包、读 `package.json` 里的 `mcpName` 字段，两者必须完全等于 `server.json` 的 `name`。所以顺序是：
+开放式部署谁都连得上，被脚本刷了额度就爆。设个 token 挡住：
 
 ```bash
-npm publish --access public     # 需要先 npm login
+# Docker
+-e MCP_TOKEN=随机长串
+
+# Vercel / Render
+在项目设置里加环境变量 MCP_TOKEN
 ```
 
-包名 `kaomoji-mcp-server`。`package.json` 里的 `mcpName` 已经是 `io.github.zyeonheenim/kaomoji`，`server.json` 里的 `name` 也是，两边别改不一致。
-
-> 想先上 Registry 但暂时不发 npm：把 `server.json` 里的 `packages` 整段删掉，只留 `remotes`。远程服务器不需要包，一样能上架。
-
-### 发布
-
-```bash
-brew install mcp-publisher
-
-cd ~/kaomoji-mcp-public
-mcp-publisher init        # 读 package.json + server.json 做校验
-mcp-publisher login github   # device flow，浏览器确认
-mcp-publisher publish
-```
-
-确认已上架：
-
-```bash
-curl "https://registry.modelcontextprotocol.io/v0.1/servers?search=kaomoji"
-```
-
-### 三条硬规矩
-
-- **`version` 发出去就锁死**，不可改不可删，升级只能递增
-- **描述限 100 字符**（`server.json` 里那句 88 字符，别加长）
-- **Registry 还在 preview**，接口可能变
-
-## 五、运营上要知道的
-
-| 事项 | 现状 |
-|---|---|
-| 免费额度 | Workers 免费版每天 10 万次请求。闲聊一天用不了几次，几千人没问题，被脚本刷就会超 |
-| 限流 | **目前没有**。要防刷：开 Workers Paid（$5/月）用内置 Rate Limiting，或设 `MCP_TOKEN` 只给小范围用 |
-| SSE 长连接 | Worker 无状态，只做 Streamable HTTP。主流客户端都支持；老客户端走本机 stdio 版 |
-| 数据更新 | 改 `scripts/build-data.mjs` → `npm run build` → 重新部署 |
-
-## 六、目录结构
+然后客户端那边加请求头：
 
 ```
-src/core.mjs          数据派生、情绪路由、四个工具、JSON-RPC（平台无关）
-src/data.mjs          解压加载内联数据
-src/worker.mjs        Cloudflare Worker 入口
-src/index.mjs         Node 入口（stdio + HTTP）
-src/data.b64.mjs      压缩数据，构建产物，入库保证 clone 即跑
-scripts/build-data.mjs  vendor/ → 情绪索引
-scripts/bundle.mjs      合成单文件
-test/test.mjs           25 项测试，覆盖三条入口
-wrangler.toml           部署配置
-server.json             MCP Registry 清单
+Authorization: Bearer 你的随机长串
 ```
 
-## 七、和本地私有版的区别
+或者地址后面加 `?token=你的随机长串`。不设这个变量就是谁都能连，自己判断。
 
-`~/kaomoji-mcp/` 那份用的是韩式可爱风数据（snskeyboard 来源），条款禁止再分发，只自己用。
+---
 
-这份公开版换成了 MIT 许可的 kaomoji-collection（经典日式风：`(๑>ᴗ<๑)ﾃﾍｯ♡`、`ฅ^•ﻌ•^ฅ`），可以放心对外提供。两份互不干扰。
+## 排错
+
+| 现象 | 原因 | 怎么办 |
+|---|---|---|
+| 404 | 地址少了 `/mcp` | Vercel 是 `/mcp` 或 `/api/mcp`，Render 是 `/mcp` |
+| 401 | 设了 `MCP_TOKEN` 但客户端没带 | 加 `Authorization: Bearer <串>` |
+| 客户端说传输不支持 | 类型选成了 STDIO | 远程一律选 **Streamable HTTP** |
+| 第一次调用很慢 | Render 免费版休眠唤醒 | 正常，之后就快了 |
+| Vercel 部署报体积超限 | 极少见（本服务约 400 KB） | 改用 Render 或 Docker |
+| 手机连不上但电脑能 | 两端不在同一网络 / DNS 污染 | 用 Tailscale，或换个域名 |
+
+部署完先跑一次上面的 `curl`，通了再去折腾客户端——不然分不清是服务挂了还是客户端配错了。

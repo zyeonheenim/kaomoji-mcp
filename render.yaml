@@ -1,0 +1,18 @@
+# Render 一键部署配置
+#
+# 点 README 里的 Deploy to Render 按钮，Render 会读这个文件建服务。
+# 免费版会在 15 分钟无请求后休眠，下次唤醒要几秒冷启动——对 MCP 这种
+# 低频调用够用，在意首字延迟的话自己升到付费档或换平台。
+services:
+  - type: web
+    name: kaomoji-mcp
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8080
+      # 留空表示谁都能连。想只给自己用，填个随机串，客户端里加
+      # Authorization: Bearer <这个串>
+      - key: MCP_TOKEN
+        sync: false

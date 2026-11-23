@@ -4,7 +4,8 @@
  *
  *   1. 核心层   —— 直接调 dispatch，验协议与情绪路由
  *   2. Worker   —— 喂 fetch handler 真 Request，验 HTTP 分流
- *   3. stdio    —— 真起一个子进程，验 JSON-RPC 行协议
+ *   3. Edge     —— 直接调 Vercel 适配层，验 /api/mcp 与首页端点推导
+ *   4. stdio    —— 真起一个子进程，验 JSON-RPC 行协议
  *
  * 不用任何测试框架，node 自带 assert 够用。CI 里跑 `npm test`。
  */
@@ -196,6 +197,47 @@ await t('坏 JSON 返回 -32700', async () => {
 await t('OPTIONS 预检与 404 兜底', async () => {
   assert.equal((await fetchWorker('/', { method: 'OPTIONS' })).status, 204);
   assert.equal((await fetchWorker('/nope')).status, 404);
+});
+
+/* -------------------------------------------------------- 3. Edge / Vercel */
+
+console.log('\nEdge（Vercel）');
+
+const edge = (await import('../api/mcp.mjs')).default;
+
+await t('POST /api/mcp 能调工具', async () => {
+  const r = await edge(
+    new Request('https://demo.vercel.app/api/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'pick_kaomoji', arguments: { mood: '开心', count: 2 } },
+      }),
+    })
+  );
+  assert.equal(r.status, 200);
+  const j = await r.json();
+  assert.equal(j.result.structuredContent.items.length, 2);
+});
+
+await t('首页端点按部署域名推导，不写死作者域名', async () => {
+  const r = await edge(new Request('https://someone-else.vercel.app/api/mcp'));
+  const html = await r.text();
+  assert.ok(html.includes('someone-else.vercel.app'), '应显示部署者自己的域名');
+  assert.ok(!html.includes('zyeonheenim.stream'), '不该出现作者域名');
+});
+
+await t('vercel.json 把 /mcp 重写到 /api/mcp 后仍能调工具', async () => {
+  const r = await edge(
+    new Request('https://demo.vercel.app/api/mcp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
+    })
+  );
+  const j = await r.json();
+  assert.equal(j.result.tools.length, 4);
 });
 
 /* ---------------------------------------------------------- 3. stdio */
