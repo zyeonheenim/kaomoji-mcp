@@ -22,7 +22,7 @@ An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion 
 </p>
 
 > **本项目没有官方公共实例**，也不替任何人付服务器账单。
-> 桌面客户端更省事，根本不用部署：`npx -y kaomoji-mcp-server`，见下方 [①](#怎么用)。
+> 桌面客户端更省事，根本不用部署：`npx -y github:zyeonheenim/kaomoji-mcp`，见下方 [①](#怎么用)。
 
 ---
 
@@ -71,17 +71,17 @@ decorate("今天被夸了有点飘嘿嘿")
 ### ① 本机 stdio —— 桌面端最省事
 
 ```bash
-npx -y kaomoji-mcp-server
+npx -y github:zyeonheenim/kaomoji-mcp
 ```
 
-Claude Desktop 的 `claude_desktop_config.json`：
+一行跑起来，直接从 GitHub 取代码，不经过 npm 仓库、不装全局包。Claude Desktop 的 `claude_desktop_config.json`：
 
 ```json
 {
   "mcpServers": {
     "kaomoji": {
       "command": "npx",
-      "args": ["-y", "kaomoji-mcp-server"]
+      "args": ["-y", "github:zyeonheenim/kaomoji-mcp"]
     }
   }
 }
@@ -90,10 +90,12 @@ Claude Desktop 的 `claude_desktop_config.json`：
 Claude Code 一条命令：
 
 ```bash
-claude mcp add kaomoji -- npx -y kaomoji-mcp-server
+claude mcp add kaomoji -- npx -y github:zyeonheenim/kaomoji-mcp
 ```
 
 这条路不需要任何服务器、任何账号。缺点只有一个：手机客户端启动不了你电脑上的进程，那边得用远程方式。
+
+> 为什么是 `github:` 而不是包名？因为 `kaomoji-mcp-server` 还没发到 npm（`kaomoji-mcp` 这个包名已被第三方占用，与本项目无关）。等发版之后就能简写成 `npx -y kaomoji-mcp-server`，在此之前 `github:` 形式完全等效。极端情况下若报 git 相关错误，装一下 git（macOS 装 Xcode 命令行工具即可），或者退回下面的源码方式。
 
 ### ② 远程 —— 部署一个自己的实例
 
