@@ -4,19 +4,23 @@
  *
  *   1. 核心层   —— 直接调 dispatch，验协议与情绪路由
  *   2. Worker   —— 喂 fetch handler 真 Request，验 HTTP 分流
- *   3. Edge     —— 直接调 Vercel 适配层，验 /api/mcp 与首页端点推导
+ *   3. Vercel   —— 两种入参形态都验：Node 的 (req,res) 与 Edge 的 Request
  *   4. stdio    —— 真起一个子进程，验 JSON-RPC 行协议
  *
  * 不用任何测试框架，node 自带 assert 够用。CI 里跑 `npm test`。
  */
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawn } from 'node:child_process';
-import { dispatch, STATS, TOOLS } from '../src/core.mjs';
+import { dispatch, ready, STATS, TOOLS } from '../src/core.mjs';
 import worker from '../src/worker.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+
+// 数据是惰性加载的（模块顶层不能有 await），所以测试开始前先把它就位
+await ready();
 let pass = 0;
 let fail = 0;
 
@@ -199,48 +203,89 @@ await t('OPTIONS 预检与 404 兜底', async () => {
   assert.equal((await fetchWorker('/nope')).status, 404);
 });
 
-/* -------------------------------------------------------- 3. Edge / Vercel */
+/* -------------------------------------------------------- 3. Vercel */
 
-console.log('\nEdge（Vercel）');
+console.log('\nVercel');
 
 const edge = (await import('../api/mcp.mjs')).default;
 
-await t('POST /api/mcp 能调工具', async () => {
-  const r = await edge(
-    new Request('https://demo.vercel.app/api/mcp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0', id: 1, method: 'tools/call',
-        params: { name: 'pick_kaomoji', arguments: { mood: '开心', count: 2 } },
-      }),
-    })
-  );
+/** 模拟 Vercel 现在真正传进来的东西：Node 的 req / res，url 是相对路径 */
+async function callNode({ method = 'POST', path: reqPath = '/api/mcp', body, headers = {} } = {}) {
+  const req = {
+    method,
+    url: reqPath,
+    headers: { host: 'demo.vercel.app', 'content-type': 'application/json', ...headers },
+    body,
+  };
+  let status = 0;
+  let payload = '';
+  const outHeaders = {};
+  const res = {
+    setHeader(k, v) {
+      outHeaders[k.toLowerCase()] = v;
+    },
+    end(b) {
+      payload = b ? b.toString('utf8') : '';
+    },
+    set statusCode(v) {
+      status = v;
+    },
+    get statusCode() {
+      return status;
+    },
+  };
+  await edge(req, res);
+  return { status, headers: outHeaders, body: payload };
+}
+
+await t('Node 形态 POST /api/mcp 能调工具（Vercel 现在的真实入参）', async () => {
+  const r = await callNode({
+    body: JSON.stringify({
+      jsonrpc: '2.0', id: 1, method: 'tools/call',
+      params: { name: 'pick_kaomoji', arguments: { mood: '开心', count: 2 } },
+    }),
+  });
   assert.equal(r.status, 200);
-  const j = await r.json();
-  assert.equal(j.result.structuredContent.items.length, 2);
+  assert.equal(JSON.parse(r.body).result.structuredContent.items.length, 2);
 });
 
-await t('首页端点按部署域名推导，不写死作者域名', async () => {
-  const r = await edge(new Request('https://someone-else.vercel.app/api/mcp'));
-  const html = await r.text();
-  assert.ok(html.includes('someone-else.vercel.app'), '应显示部署者自己的域名');
-  assert.ok(!html.includes('zyeonheenim.stream'), '不该出现作者域名');
+await t('Node 形态的相对路径能补成绝对 URL，端点按部署域名推导', async () => {
+  const r = await callNode({ method: 'GET', path: '/' });
+  assert.equal(r.status, 200);
+  assert.match(r.body, /demo\.vercel\.app\/mcp/, '应显示部署者自己的域名');
+  assert.ok(!r.body.includes('zyeonheenim.stream'), '不该出现作者域名');
 });
 
-await t('vercel.json 把 /mcp 重写到 /api/mcp 后仍能调工具', async () => {
+await t('Node 形态能透传请求头与预解析过的 body', async () => {
+  const r = await callNode({
+    headers: { authorization: 'Bearer x' },
+    body: { jsonrpc: '2.0', id: 7, method: 'tools/list' },
+  });
+  assert.equal(r.status, 200);
+  assert.equal(JSON.parse(r.body).result.tools.length, 4);
+});
+
+await t('Edge 形态（直接传 Request）仍可用作兜底', async () => {
   const r = await edge(
-    new Request('https://demo.vercel.app/api/mcp', {
+    new Request('https://someone-else.vercel.app/api/mcp', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
     })
   );
-  const j = await r.json();
-  assert.equal(j.result.tools.length, 4);
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).result.tools.length, 4);
 });
 
-/* ---------------------------------------------------------- 3. stdio */
+await t('源码里没有顶层 await（打成 CJS 会构建失败）', () => {
+  for (const f of ['src/data.mjs', 'src/core.mjs', 'src/worker.mjs', 'api/mcp.mjs']) {
+    const s = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    assert.ok(!/^await\s/m.test(s), `${f} 含顶层 await`);
+    assert.ok(!/^export default await/m.test(s), `${f} 含顶层 await`);
+  }
+});
+
+/* ------------------------------------------------------------ 4. stdio */
 
 console.log('\nstdio');
 

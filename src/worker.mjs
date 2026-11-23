@@ -6,7 +6,7 @@
  *
  * 部署：wrangler deploy / Vercel Edge（api/mcp.mjs）/ Docker，三者共用这一份。
  */
-import { dispatch, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
+import { dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
 const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
 
@@ -16,6 +16,9 @@ const MCP_PATHS = new Set(['/mcp', '/', '/api/mcp']);
 export default {
   async fetch(request, env = {}) {
     const url = new URL(request.url);
+
+    // 首次请求时解压数据，之后命中缓存（同一个 isolate 内常驻）
+    await ready();
 
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 

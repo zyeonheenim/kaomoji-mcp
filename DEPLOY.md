@@ -62,7 +62,7 @@ curl -s -X POST https://<项目名>.vercel.app/mcp \
 ### 要注意
 
 - **Hobby 条款限「个人非商业用途」。** 自己用、给朋友用没问题；要是拿它做收费产品的一部分，条款上得升 Pro。
-- **Edge Runtime 不支持老式 SSE**（`GET /sse` 那种挂连接等推送的）。Streamable HTTP 够用，现在主流客户端都吃这套。
+- **老式 SSE 用不了**（`GET /sse` 那种挂一条连接等推送的）。Vercel 的函数是无状态的，连接留不住。Streamable HTTP 够用，现在主流客户端都吃这套。
 - `vercel.app` 在大陆网络下时好时坏。真要稳定就绑自己的域名，在 Vercel 那边加就行，不用动别处。
 
 ---
@@ -185,6 +185,7 @@ Authorization: Bearer 你的随机长串
 | 客户端说传输不支持 | 类型选成了 STDIO | 远程一律选 **Streamable HTTP** |
 | 第一次调用很慢 | Render 免费版休眠唤醒 | 正常，之后就快了 |
 | Vercel 部署报体积超限 | 极少见（本服务约 400 KB） | 改用 Render 或 Docker |
+| 构建失败：`Top-level await is currently not supported with the "cjs" output format` | 早期提交的代码在 `data.mjs` 里用了顶层 await，而 Vercel 会把函数打成 CJS | 拉最新代码重新部署——数据已改成惰性加载（`ready()`） |
 | 手机连不上但电脑能 | 两端不在同一网络 / DNS 污染 | 用 Tailscale，或换个域名 |
 
 部署完先跑一次上面的 `curl`，通了再去折腾客户端——不然分不清是服务挂了还是客户端配错了。

@@ -7,18 +7,41 @@
  *   · src/index.mjs   Node：stdio（给本机客户端）+ HTTP（给局域网/iPad）
  *   · src/worker.mjs  Cloudflare Worker：fetch handler
  */
-import DATA from './data.mjs';
+import { loadData } from './data.mjs';
 
 export const VERSION = '1.0.0';
 export const SERVER = { name: 'kaomoji', version: VERSION };
 
-export const CATS = DATA.categories;
-export const BY_ID = new Map(CATS.map((c) => [c.id, c]));
-export const STATS = { total: DATA.total, categories: CATS.length };
+/**
+ * 数据与派生索引，由 ready() 填充。
+ *
+ * 用 let 而不是 const：这个模块本身不能有顶层 await（Vercel 打包成 CJS 会报错），
+ * 所以数据晚于模块求值就位。`export let` 的实时绑定保证 importer 拿到的始终是
+ * 填充后的值——不需要把 CATS 改成函数。
+ */
+let DATA = null;
+export let CATS = [];
+export let BY_ID = new Map();
+export let STATS = { total: 0, categories: 0 };
+export let INSTRUCTIONS = '';
 
-export const INSTRUCTIONS = `颜文字库，共 ${DATA.total} 条，分 ${CATS.length} 个情绪分类（开心、生气、难过、撒娇、困、猫猫狗狗都有）。
+let readyPromise = null;
+
+/** 加载数据并派生索引。可重复调用，只真正执行一次。 */
+export function ready() {
+  if (!readyPromise) {
+    readyPromise = loadData().then((d) => {
+      DATA = d;
+      CATS = d.categories;
+      BY_ID = new Map(CATS.map((c) => [c.id, c]));
+      STATS = { total: d.total, categories: CATS.length };
+      INSTRUCTIONS = `颜文字库，共 ${d.total} 条，分 ${CATS.length} 个情绪分类（开心、生气、难过、撒娇、困、猫猫狗狗都有）。
 用法：当回复带情绪、且场合轻松时，用 pick_kaomoji 描述当下的心情，取 3-5 条候选，挑一条最贴的贴到句尾。
 一条就够，不要堆；正式场合、坏消息、用户明显在难过的时候一律不要用。`;
+    });
+  }
+  return readyPromise;
+}
 
 /* ---------------------------------------------------------------- 工具函数 */
 
@@ -323,6 +346,8 @@ const HANDLERS = {
 /* -------------------------------------------------------------- JSON-RPC */
 
 function processMessage(msg) {
+  // 数据没就位时不要给出「没看懂这个情绪」这种误导性结果，直接报错更诚实
+  if (!DATA) throw new Error('数据尚未加载：调用 dispatch 前请先 await ready()');
   const { id, method, params } = msg;
   const isNotification = id === undefined || id === null;
   const ok = (result) => ({ jsonrpc: '2.0', id, result });

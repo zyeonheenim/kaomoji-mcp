@@ -114,7 +114,7 @@ Render 部署完 → https://<你的服务>.onrender.com/mcp
 
 **不用买域名。** 平台给的免费子域够用，想绑自己的域名是后话。
 
-> Render 免费版 15 分钟没请求会休眠，下次唤醒几秒冷启动。Vercel 的 Edge 函数不会睡，但 Hobby 条款限「个人非商业」用途。两边都免费，按在意什么挑。
+> Render 免费版 15 分钟没请求会休眠，下次唤醒几秒冷启动。Vercel 只会按请求冷启动（有预热，通常一两百毫秒），不像 Render 那样固定休眠；但 Hobby 条款限「个人非商业」用途。两边都免费，按在意什么挑。
 
 ### ③ 自己的机器 —— Docker 或源码
 
@@ -181,7 +181,7 @@ search_kaomoji(query: "♡")
 
 | 平台 | 入口 | 传输能力 | 备注 |
 |---|---|---|---|
-| Vercel | `api/mcp.mjs`（Edge Runtime） | Streamable HTTP | 无状态，`/mcp` 由 `vercel.json` 重写到 `/api/mcp`；Hobby 条款限个人非商业 |
+| Vercel | `api/mcp.mjs`（Node.js 函数） | Streamable HTTP | 无状态，`/mcp` 由 `vercel.json` 重写到 `/api/mcp`；Hobby 条款限个人非商业 |
 | Render / Railway / Zeabur / VPS | `Dockerfile` | HTTP + 老式 SSE | 真进程，长连接可用；Render 免费版会休眠 |
 | Cloudflare Workers | `src/worker.mjs` | Streamable HTTP | 免费额度每天 10 万请求；仓库带 `wrangler.toml` |
 | 本机 | `src/index.mjs` | stdio / HTTP / SSE | 三种全支持 |
@@ -197,7 +197,7 @@ Cloudflare 想省掉装 wrangler 的话：`npm run build` 会生成 `dist/worker
 ```bash
 npm run build   # vendor/kaomoji.json → src/data.b64.mjs（+ dist/worker.js）
 npm run check   # 验证提交的内联数据能由 vendor/ 完全重建
-npm test        # 28 项，覆盖核心 / Worker / Edge / stdio 四条入口
+npm test        # 30 项，覆盖核心 / Worker / Vercel / stdio 四条入口
 ```
 
 `src/` 分层：
@@ -206,11 +206,11 @@ npm test        # 28 项，覆盖核心 / Worker / Edge / stdio 四条入口
 |---|---|
 | `core.mjs` | 数据派生、情绪路由、四个工具、JSON-RPC 分发。**平台无关**，只用 Web 标准 API |
 | `data.mjs` | 解压加载内联数据（`DecompressionStream`，Node 和边缘运行时通吃） |
-| `worker.mjs` | fetch handler 外壳：CF Worker、Vercel Edge 都走这里 |
+| `worker.mjs` | fetch handler 外壳：CF Worker、Vercel 都走这里 |
 | `index.mjs` | Node 外壳：stdio + HTTP（含老式 SSE） |
-| `api/mcp.mjs` | Vercel Edge 适配层，就十几行 |
+| `api/mcp.mjs` | Vercel 适配层：把 Node 的 (req, res) 转成标准 Request，再把 Response 写回去 |
 
-平台无关那层是关键：`core.mjs` 里没有一行 `node:` 导入，所以同一个文件能在 Worker、Vercel Edge、Deno、Node 上直接跑。这也是为什么加一个平台只需要写个十几行的外壳。
+平台无关那层是关键：`core.mjs` 里没有一行 `node:` 导入，所以同一个文件能在 Worker、Vercel、Deno、Node 上直接跑。这也是为什么加一个平台只需要写个十几行的外壳。
 
 `src/data.b64.mjs` 是构建产物但**入库**了：这样 clone 下来不用 build 就能跑。CI 会验证它和 `vendor/` 一致，手改会被拦。
 

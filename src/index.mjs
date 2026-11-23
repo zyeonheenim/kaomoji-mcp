@@ -12,14 +12,16 @@
 import readline from 'node:readline';
 import http from 'node:http';
 import os from 'node:os';
-import { dispatch, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
+import { dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
 const TOKEN = process.env.MCP_TOKEN || '';
 const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
 
 /* ---------------------------------------------------------------- stdio */
 
-function runStdio() {
+async function runStdio() {
+  // 先把数据解压好再开始读 stdin，避免第一条消息还没东西可查
+  await ready();
   const rl = readline.createInterface({ input: process.stdin, terminal: false });
 
   rl.on('line', (line) => {
@@ -61,7 +63,8 @@ function readBody(req) {
   });
 }
 
-function runHttp(port, host) {
+async function runHttp(port, host) {
+  await ready();
   const sessions = new Map(); // sessionId -> ServerResponse
 
   const server = http.createServer(async (req, res) => {
@@ -192,8 +195,14 @@ const flag = (name, fallback) => {
   return i >= 0 && args[i + 1] ? args[i + 1] : fallback;
 };
 
+// 启动失败（比如数据解压不出来）要说清楚原因，别无声退出
+const fatal = (e) => {
+  process.stderr.write(`[kaomoji-mcp] 启动失败：${e.message}\n`);
+  process.exit(1);
+};
+
 if (args.includes('--http') || args.includes('http')) {
-  runHttp(Number(flag('--port', process.env.PORT)) || 8790, flag('--host', process.env.HOST || '0.0.0.0'));
+  runHttp(Number(flag('--port', process.env.PORT)) || 8790, flag('--host', process.env.HOST || '0.0.0.0')).catch(fatal);
 } else {
-  runStdio();
+  runStdio().catch(fatal);
 }

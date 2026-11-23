@@ -23,7 +23,7 @@ const stripImports = (s) => s.replace(/^import\s[^\n]*?from\s['"]\.[^'"]*['"];?\
 const stripExports = (s) => s.replace(/^export\s+(const|let|var|function|class|async\s+function)\s/gm, '$1 ');
 
 const b64 = read('src/data.b64.mjs').replace(/^export default /m, 'const B64 = ');
-const data = stripImports(read('src/data.mjs')).replace(/^export default /m, 'const DATA = ');
+const data = stripExports(stripImports(read('src/data.mjs')));
 const core = stripExports(stripImports(read('src/core.mjs')));
 const worker = stripImports(read('src/worker.mjs'));
 
