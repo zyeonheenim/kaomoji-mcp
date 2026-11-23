@@ -108,13 +108,52 @@ Render 部署完 → https://<你的服务>.onrender.com/mcp
 
 | 字段 | 填什么 |
 |---|---|
-| 类型 / 传输 | **Streamable HTTP**（不要选 STDIO） |
-| 地址 / URL | 上面那个 `/mcp` 结尾的地址 |
-| 认证 | 留空就是谁都能连。要锁上：设环境变量 `MCP_TOKEN`，然后把地址写成 `.../mcp?token=<你的串>` |
+| 类型 / 传输 | **Streamable HTTP**（不要选 STDIO / SSE） |
+| 地址 / URL | 上面那个 `/mcp` 结尾的地址；设了令牌就写成 `.../mcp?token=<你的令牌>` |
+| 认证 | 没设 `MCP_TOKEN` 就留空（谁都能连）；设了就按下一节带令牌 |
 
 **不用买域名。** 平台给的免费子域够用，想绑自己的域名是后话。
 
-> 自己用的实例建议加令牌——地址是猜得到的（`项目名.vercel.app`），不加等于公开。Vercel 上加完变量**必须 Redeploy** 才生效。详见 [DEPLOY.md](DEPLOY.md#加个门只给自己用)。
+#### 带令牌部署（只给自己用）
+
+域名是猜得到的（`项目名.vercel.app`），不加门等于把额度挂在公网上任人刷。四步：
+
+**1. 生成一个随机串**
+
+```bash
+openssl rand -hex 16      # → 例如 3f9c...（32 位十六进制，别用生日和 123456）
+```
+
+**2. 在平台加环境变量 `MCP_TOKEN`**
+
+| 平台 | 加在哪 |
+|---|---|
+| Vercel | Project → Settings → Environment Variables → Key 填 `MCP_TOKEN`，Value 填刚才那串；三个环境（Production / Preview / Development）都勾上 |
+| Render | Dashboard → Environment → Add Environment Variable → `MCP_TOKEN` |
+| Docker | `docker run -e MCP_TOKEN=<你的令牌> ...` |
+| Cloudflare | `wrangler secret put MCP_TOKEN`，或在后台 Settings → Variables and Secrets |
+
+> **Vercel 的坑**：变量只在构建时注入，**加完必须 Redeploy 一次**才生效。Redeploy 时把「Use existing build cache」取消勾选，否则可能拿到旧构建。Key 名必须**一字不差**是 `MCP_TOKEN`——写成别的名字不会报错，只会静默不生效，看起来像"令牌没用"。
+
+**3. 客户端带令牌**（三种服务端都认，任选一种）
+
+| 带法 | 写法 | 适合 |
+|---|---|---|
+| 拼在地址里 | `https://<你的项目>.vercel.app/mcp?token=<你的令牌>` | **手机 / 平板客户端首选**，这类界面往往只让填一个 URL |
+| 标准头 | `Authorization: Bearer <你的令牌>` | 能自定义请求头的客户端 |
+| 短头 | `X-MCP-Token: <你的令牌>` | 只给一个"密钥"输入框、不让改 header 名的客户端 |
+
+**4. 确认真的锁上了**
+
+```bash
+curl -o /dev/null -w "%{http_code}\n" https://<你的项目>.vercel.app/health
+# 期望 401。返回 200 说明令牌没生效，回第 2 步查 Key 名和 Redeploy
+```
+
+带令牌打开首页会显示「本实例已启用令牌校验」，可以直接在浏览器里验。
+
+> 令牌会随 `?token=` 落进平台访问日志，自己用无所谓；想干净就用 `Authorization` 头。
+> 别把令牌写进仓库或贴进 README / issue —— 写成 `<你的令牌>` 占位符就行。
 
 > Render 免费版 15 分钟没请求会休眠，下次唤醒几秒冷启动。Vercel 只会按请求冷启动（有预热，通常一两百毫秒），不像 Render 那样固定休眠；但 Hobby 条款限「个人非商业」用途。两边都免费，按在意什么挑。
 
