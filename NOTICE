@@ -1,0 +1,27 @@
+kaomoji-mcp
+Copyright (c) 2026 zyeonheenim
+Licensed under the MIT License. See LICENSE.
+
+---------------------------------------------------------------------------
+第三方数据署名 / Third-party data attribution
+---------------------------------------------------------------------------
+
+本项目的颜文字数据来自 kaomoji-collection：
+
+    Kaomoji Collection
+    https://www.kaomojiya.org
+    Copyright (c) 2026 Kaomojiya
+    Licensed under the MIT License
+
+原始数据共 41,596 条、535 个分类。本仓库的 vendor/kaomoji.json 是未经改动的
+原始快照，scripts/build-data.mjs 完成以下处理并输出 src/data.b64.mjs：
+
+  · 解码抓取时残留的 HTML 实体（&gt; &lt; &amp; &quot; 等，共约 1,768 条受影响）
+  · 按字符构成与长度做质量分档（clean / fancy / heavy）
+  · 把 535 个日文罗马字分类映射为 38 个中文情绪分类
+  · 去重
+
+全部处理步骤都是公开代码，任何人都可以从 vendor/ 复现出完全相同的结果；
+CI 会在每次提交时验证这一点。
+
+kaomoji-collection 的 MIT 许可原文见 vendor/LICENSE。

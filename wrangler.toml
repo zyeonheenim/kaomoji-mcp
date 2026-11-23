@@ -1,0 +1,12 @@
+name = "kaomoji-mcp"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-01"
+
+# 自定义域：workers.dev 在部分网络下不通，绑自己的域名更稳
+# 前提是 zyeonheenim.stream 这个 zone 已经托管在同一个 Cloudflare 账号下
+[[routes]]
+pattern = "kaomoji.zyeonheenim.stream"
+custom_domain = true
+
+[observability]
+enabled = true

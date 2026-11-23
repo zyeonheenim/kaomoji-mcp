@@ -1,0 +1,47 @@
+{
+  "name": "kaomoji-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server that picks kaomoji by mood — 22,408 emoticons across 38 emotion categories. 按情绪挑颜文字的 MCP 服务器。",
+  "mcpName": "io.github.zyeonheenim/kaomoji",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "kaomoji-mcp": "src/index.mjs"
+  },
+  "files": [
+    "src/",
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "node scripts/build-data.mjs && node scripts/bundle.mjs",
+    "test": "node test/test.mjs",
+    "start": "node src/index.mjs",
+    "http": "node src/index.mjs --http",
+    "deploy": "wrangler deploy"
+  },
+  "keywords": [
+    "mcp",
+    "mcp-server",
+    "model-context-protocol",
+    "kaomoji",
+    "emoticon",
+    "emoji",
+    "ai",
+    "claude",
+    "chat"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zyeonheenim/kaomoji-mcp.git"
+  },
+  "homepage": "https://kaomoji.zyeonheenim.stream",
+  "bugs": {
+    "url": "https://github.com/zyeonheenim/kaomoji-mcp/issues"
+  }
+}

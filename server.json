@@ -1,0 +1,28 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.zyeonheenim/kaomoji",
+  "title": "Kaomoji",
+  "description": "Pick kaomoji by mood. Describe a feeling, get faces that fit — 22,408 emoticons, 38 emotion categories.",
+  "version": "1.0.0",
+  "websiteUrl": "https://kaomoji.zyeonheenim.stream",
+  "repository": {
+    "url": "https://github.com/zyeonheenim/kaomoji-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "kaomoji-mcp-server",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://kaomoji.zyeonheenim.stream/mcp"
+    }
+  ]
+}

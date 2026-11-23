@@ -1,0 +1,14 @@
+node_modules/
+
+# 构建中间产物：由 vendor/ + scripts/ 完全可重建，不入库
+data/
+dist/
+.wrangler/
+
+# 本地配置
+.env
+.env.*
+wrangler.toml.bak
+
+*.log
+.DS_Store
