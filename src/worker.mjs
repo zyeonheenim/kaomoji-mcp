@@ -35,7 +35,8 @@ export default {
     }
 
     // 首页：端点地址按实际部署位置推导，别人部署后不会显示成作者的域名
-    if ((url.pathname === '/' || url.pathname === '/api/mcp') && request.method === 'GET') {
+    // 浏览器直接打开 /mcp 也走这里——否则分享出去的端点链接点开是一屏 JSON 报错
+    if (MCP_PATHS.has(url.pathname) && request.method === 'GET') {
       const endpoint = env.ENDPOINT_HINT || `${url.origin}/mcp`;
       return new Response(homePage(endpoint, REPO, Boolean(env.MCP_TOKEN)), {
         headers: {
