@@ -4,13 +4,25 @@
 
 An MCP server that picks kaomoji by mood — 22,408 emoticons across 38 emotion categories, zero dependencies.
 
-[![CI](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml)
+<h3 align="center">👇 手机 / 平板用户（Kelivo、Claude App、Cherry Mobile）从这里开始</h3>
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/zyeonheenim/kaomoji-mcp)
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp)
+<p align="center">
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzyeonheenim%2Fkaomoji-mcp&project-name=kaomoji-mcp&repository-name=kaomoji-mcp">
+    <img src="https://img.shields.io/badge/%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" height="46" alt="一键部署到 Vercel">
+  </a>
+  &nbsp;&nbsp;
+  <a href="https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp">
+    <img src="https://img.shields.io/badge/%E5%A4%87%E9%80%89-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black" height="46" alt="部署到 Render">
+  </a>
+</p>
 
-> **没有官方公共实例。** 这个项目只提供代码，不替所有人付服务器账单。
-> 手机端的远程 MCP 需要你自己部署一个——点上面任意一个按钮，两分钟，用你自己的免费额度，不用买域名。
+<p align="center">
+  <b>点一下 → 登录自己的账号 → 两分钟拿到 <code>https://你的项目.vercel.app/mcp</code></b><br>
+  <sub>不买域名、不付钱，花的是你自己的免费额度。</sub>
+</p>
+
+> **本项目没有官方公共实例**，也不替任何人付服务器账单。
+> 桌面客户端更省事，根本不用部署：`npx -y kaomoji-mcp-server`，见下方 [①](#怎么用)。
 
 ---
 
@@ -85,7 +97,7 @@ claude mcp add kaomoji -- npx -y kaomoji-mcp-server
 
 ### ② 远程 —— 部署一个自己的实例
 
-手机上（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址。点顶部的 **Deploy with Vercel** 或 **Deploy to Render**，用你自己的账号：
+手机上（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址。点页面顶部的 **一键部署 Vercel** 按钮，用你自己的账号：
 
 ```
 Vercel 部署完 → https://<你的项目>.vercel.app/mcp
@@ -179,6 +191,8 @@ Cloudflare 想省掉装 wrangler 的话：`npm run build` 会生成 `dist/worker
 > 想加访问控制就在环境变量里设 `MCP_TOKEN`。三个入口都认，不设就是谁都能连。
 
 ## 开发
+
+[![CI](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml)
 
 ```bash
 npm run build   # vendor/kaomoji.json → src/data.b64.mjs（+ dist/worker.js）
