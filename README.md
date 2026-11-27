@@ -1,5 +1,9 @@
 # kaomoji-picker-mcp
 
+<p align="center">
+  <img src="assets/hero.png" width="820" alt="kaomoji-picker-mcp：按心情挑一条颜文字，22,364 条 · 38 个情绪分类 · 零依赖">
+</p>
+
 **给 AI 一个「按心情挑颜文字」的能力。22,364 条颜文字，38 个情绪分类，零依赖。**
 
 An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion categories, zero dependencies.
