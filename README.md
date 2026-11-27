@@ -1,6 +1,8 @@
 # kaomoji-picker-mcp
 
 <p align="center">
+[![npm version](https://img.shields.io/npm/v/kaomoji-picker-mcp.svg?style=flat-square&color=cb3837)](https://www.npmjs.com/package/kaomoji-picker-mcp) [![CI](https://github.com/zyeonheenim/kaomoji-picker-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-picker-mcp/actions) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
   <img src="assets/hero.png" width="820" alt="kaomoji-picker-mcp：按心情挑一条颜文字，22,364 条 · 38 个情绪分类 · 零依赖">
 </p>
 
@@ -26,7 +28,7 @@ An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion 
 </p>
 
 > **本项目没有官方公共实例**，也不替任何人付服务器账单。
-> 桌面客户端更省事，根本不用部署：`npx -y github:zyeonheenim/kaomoji-picker-mcp`，见下方 [①](#怎么用)。
+> 桌面客户端更省事，根本不用部署：`npx -y kaomoji-picker-mcp`，见下方 [①](#怎么用)。
 
 ---
 
@@ -75,7 +77,7 @@ decorate("今天被夸了有点飘嘿嘿")
 ### ① 本机 stdio —— 桌面端最省事
 
 ```bash
-npx -y github:zyeonheenim/kaomoji-picker-mcp
+npx -y kaomoji-picker-mcp
 ```
 
 一行跑起来，直接从 GitHub 取代码，不经过 npm 仓库、不装全局包。Claude Desktop 的 `claude_desktop_config.json`：
@@ -85,7 +87,7 @@ npx -y github:zyeonheenim/kaomoji-picker-mcp
   "mcpServers": {
     "kaomoji": {
       "command": "npx",
-      "args": ["-y", "github:zyeonheenim/kaomoji-picker-mcp"]
+      "args": ["-y", "kaomoji-picker-mcp"]
     }
   }
 }
@@ -94,12 +96,12 @@ npx -y github:zyeonheenim/kaomoji-picker-mcp
 Claude Code 一条命令：
 
 ```bash
-claude mcp add kaomoji -- npx -y github:zyeonheenim/kaomoji-picker-mcp
+claude mcp add kaomoji -- npx -y kaomoji-picker-mcp
 ```
 
 这条路不需要任何服务器、任何账号。缺点只有一个：手机客户端启动不了你电脑上的进程，那边得用远程方式。
 
-> 为什么是 `github:` 而不是包名？因为 `kaomoji-picker-mcp` 还没发到 npm。npm 上那个叫 `kaomoji-mcp` 的包是**另一个项目**（frankunderwood-w，只有 61 条 ASCII 符号、GPL 协议），与本项目无关——本仓库正是为了避开它才改名为 `kaomoji-picker-mcp`。等发版之后就能简写成 `npx -y kaomoji-picker-mcp`，在此之前 `github:` 形式完全等效。极端情况下若报 git 相关错误，装一下 git（macOS 装 Xcode 命令行工具即可），或者退回下面的源码方式。
+> 零配置、零依赖，无需下载源码。一行 `npx` 即可让任何支持 MCP 的桌面端（Claude Desktop / Claude Code / Cursor / Cherry Studio 等）直接跑起来。已正式发布到 npm。
 
 ### ② 远程 —— 部署一个自己的实例
 

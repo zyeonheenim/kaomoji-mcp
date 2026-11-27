@@ -1,7 +1,7 @@
 # 部署指南
 
 手机 / 平板上的 MCP 客户端（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址，
-所以那边需要一个部署好的实例。桌面客户端不用看这里，直接 `npx -y github:zyeonheenim/kaomoji-picker-mcp` 就完事。
+所以那边需要一个部署好的实例。桌面客户端不用看这里，直接 `npx -y kaomoji-picker-mcp` 就完事。
 
 **先选路：**
 
