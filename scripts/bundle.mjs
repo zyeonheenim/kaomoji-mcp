@@ -28,7 +28,7 @@ const core = stripExports(stripImports(read('src/core.mjs')));
 const worker = stripImports(read('src/worker.mjs'));
 
 const out = `/**
- * kaomoji-mcp —— 单文件版（自动生成，勿手改）
+ * kaomoji-picker-mcp —— 单文件版（自动生成，勿手改）
  *
  * 由 scripts/bundle.mjs 从 src/ 下的四个模块合并而来。
  *

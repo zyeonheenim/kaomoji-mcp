@@ -8,7 +8,7 @@
  */
 import { checkToken, dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
-const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
+const REPO = 'https://github.com/zyeonheenim/kaomoji-picker-mcp';
 
 /** MCP 端点候选路径。/api/mcp 是为了 Vercel 这类把函数挂在 /api 下的平台 */
 const MCP_PATHS = new Set(['/mcp', '/', '/api/mcp']);

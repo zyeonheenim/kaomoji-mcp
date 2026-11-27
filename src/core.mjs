@@ -1,5 +1,5 @@
 /**
- * kaomoji-mcp 核心层
+ * kaomoji-picker-mcp 核心层
  *
  * 数据派生、情绪路由、四个工具、JSON-RPC 分发，全在这里。
  * 这一层不碰任何平台 API（只用标准 Response，Node 18+ 和 Workers 都有），
@@ -10,7 +10,7 @@
 import { loadData } from './data.mjs';
 
 export const VERSION = '1.0.0';
-export const SERVER = { name: 'kaomoji', version: VERSION };
+export const SERVER = { name: 'kaomoji-picker', version: VERSION };
 
 /**
  * 数据与派生索引，由 ready() 填充。
@@ -460,14 +460,14 @@ export function homePage(endpoint, repoUrl, needToken = false) {
   const sample = CATS.slice(0, 14)
     .map((c) => `<li><b>${c.zh}</b> <code>${c.id}</code> · ${c.items.length} 条 · ${clean(c.sample)}</li>`)
     .join('');
-  return `<!doctype html><html lang="zh"><meta charset="utf-8"><title>kaomoji-mcp</title>
+  return `<!doctype html><html lang="zh"><meta charset="utf-8"><title>kaomoji-picker-mcp</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>body{font:15px/1.7 -apple-system,sans-serif;max-width:640px;margin:48px auto;padding:0 24px;color:#222}
 code{background:#f2f2f0;padding:1px 5px;border-radius:4px;font-size:13px}
 li{margin:4px 0;color:#444}h1{font-size:22px;margin-bottom:4px}.ok{color:#2a9d5c;font-size:13px}
 pre{background:#f7f6f3;padding:12px;border-radius:8px;overflow-x:auto;font-size:12px;line-height:1.6}
 a{color:#0b6bcb}</style>
-<h1>kaomoji-mcp <span class="ok">● 运行中</span></h1>
+<h1>kaomoji-picker-mcp <span class="ok">● 运行中</span></h1>
 <p>${DATA.total} 条颜文字，分 ${CATS.length} 个情绪分类。给 AI 一个「按心情挑颜文字」的能力。</p>
 <p>MCP 端点：<code>POST /mcp</code>（Streamable HTTP）</p>
 <h3>接进客户端</h3>

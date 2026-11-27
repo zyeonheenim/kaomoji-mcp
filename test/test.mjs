@@ -54,7 +54,7 @@ await t('数据规模在合理区间', () => {
 await t('initialize 返回协议版本与用法说明', () => {
   const r = rpc('initialize', { protocolVersion: '2025-06-18' });
   assert.equal(r.result.protocolVersion, '2025-06-18');
-  assert.equal(r.result.serverInfo.name, 'kaomoji');
+  assert.equal(r.result.serverInfo.name, 'kaomoji-picker');
   assert.match(r.result.instructions, /颜文字库/);
 });
 
@@ -383,7 +383,7 @@ await t('子进程能完成 initialize → tools/call 往返', async () => {
   });
 
   assert.equal(out.length, 2, '通知不该产生响应行');
-  assert.equal(out[0].result.serverInfo.name, 'kaomoji');
+  assert.equal(out[0].result.serverInfo.name, 'kaomoji-picker');
   assert.equal(out[1].result.structuredContent.items.length, 2);
 });
 

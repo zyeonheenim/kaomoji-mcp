@@ -1,7 +1,7 @@
 # 部署指南
 
 手机 / 平板上的 MCP 客户端（Kelivo、RikkaHub、Cherry Studio Mobile）只能连远程地址，
-所以那边需要一个部署好的实例。桌面客户端不用看这里，直接 `npx -y github:zyeonheenim/kaomoji-mcp` 就完事。
+所以那边需要一个部署好的实例。桌面客户端不用看这里，直接 `npx -y github:zyeonheenim/kaomoji-picker-mcp` 就完事。
 
 **先选路：**
 
@@ -33,7 +33,7 @@
 
 1. 点 README 顶部的 **Deploy with Vercel**，或者直接打开：
    ```
-   https://vercel.com/new/clone?repository-url=https://github.com/zyeonheenim/kaomoji-mcp
+   https://vercel.com/new/clone?repository-url=https://github.com/zyeonheenim/kaomoji-picker-mcp
    ```
 2. 用 GitHub 账号登录，Vercel 会把这个仓库复制一份到你名下
 3. 项目名随便起，Framework Preset 保持默认，直接 **Deploy**
@@ -71,7 +71,7 @@ curl -s -X POST https://<项目名>.vercel.app/mcp \
 
 1. 点 README 里的 **Deploy to Render**，或打开：
    ```
-   https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp
+   https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-picker-mcp
    ```
 2. 登录 Render，它会读仓库里的 `render.yaml` 自动建服务
 3. 等 Docker 构建完（第一次两三分钟），得到 `https://<服务名>.onrender.com`
@@ -87,10 +87,10 @@ curl -s -X POST https://<项目名>.vercel.app/mcp \
 ## Docker / 任何有 Docker 的机器
 
 ```bash
-git clone https://github.com/zyeonheenim/kaomoji-mcp.git
-cd kaomoji-mcp
-docker build -t kaomoji-mcp .
-docker run -d -p 8080:8080 --name kaomoji kaomoji-mcp
+git clone https://github.com/zyeonheenim/kaomoji-picker-mcp.git
+cd kaomoji-picker-mcp
+docker build -t kaomoji-picker-mcp .
+docker run -d -p 8080:8080 --name kaomoji kaomoji-picker-mcp
 ```
 
 地址：`http://<机器地址>:8080/mcp`
@@ -102,7 +102,7 @@ Railway / Zeabur / Fly.io / 群晖 / 树莓派都一样：识别到 `Dockerfile`
 想加个 token：
 
 ```bash
-docker run -d -p 8080:8080 -e MCP_TOKEN=你的随机串 kaomoji-mcp
+docker run -d -p 8080:8080 -e MCP_TOKEN=你的随机串 kaomoji-picker-mcp
 ```
 
 ---

@@ -1,4 +1,4 @@
-# kaomoji-mcp
+# kaomoji-picker-mcp
 
 **给 AI 一个「按心情挑颜文字」的能力。22,364 条颜文字，38 个情绪分类，零依赖。**
 
@@ -7,11 +7,11 @@ An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion 
 <h3 align="center">👇 手机 / 平板用户（Kelivo、Claude App、Cherry Mobile）从这里开始</h3>
 
 <p align="center">
-  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzyeonheenim%2Fkaomoji-mcp&project-name=kaomoji-mcp&repository-name=kaomoji-mcp">
+  <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fzyeonheenim%2Fkaomoji-picker-mcp&project-name=kaomoji-picker-mcp&repository-name=kaomoji-picker-mcp">
     <img src="https://img.shields.io/badge/%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" height="46" alt="一键部署到 Vercel">
   </a>
   &nbsp;&nbsp;
-  <a href="https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-mcp">
+  <a href="https://render.com/deploy?repo=https://github.com/zyeonheenim/kaomoji-picker-mcp">
     <img src="https://img.shields.io/badge/%E5%A4%87%E9%80%89-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black" height="46" alt="部署到 Render">
   </a>
 </p>
@@ -22,7 +22,7 @@ An MCP server that picks kaomoji by mood — 22,364 emoticons across 38 emotion 
 </p>
 
 > **本项目没有官方公共实例**，也不替任何人付服务器账单。
-> 桌面客户端更省事，根本不用部署：`npx -y github:zyeonheenim/kaomoji-mcp`，见下方 [①](#怎么用)。
+> 桌面客户端更省事，根本不用部署：`npx -y github:zyeonheenim/kaomoji-picker-mcp`，见下方 [①](#怎么用)。
 
 ---
 
@@ -71,7 +71,7 @@ decorate("今天被夸了有点飘嘿嘿")
 ### ① 本机 stdio —— 桌面端最省事
 
 ```bash
-npx -y github:zyeonheenim/kaomoji-mcp
+npx -y github:zyeonheenim/kaomoji-picker-mcp
 ```
 
 一行跑起来，直接从 GitHub 取代码，不经过 npm 仓库、不装全局包。Claude Desktop 的 `claude_desktop_config.json`：
@@ -81,7 +81,7 @@ npx -y github:zyeonheenim/kaomoji-mcp
   "mcpServers": {
     "kaomoji": {
       "command": "npx",
-      "args": ["-y", "github:zyeonheenim/kaomoji-mcp"]
+      "args": ["-y", "github:zyeonheenim/kaomoji-picker-mcp"]
     }
   }
 }
@@ -90,12 +90,12 @@ npx -y github:zyeonheenim/kaomoji-mcp
 Claude Code 一条命令：
 
 ```bash
-claude mcp add kaomoji -- npx -y github:zyeonheenim/kaomoji-mcp
+claude mcp add kaomoji -- npx -y github:zyeonheenim/kaomoji-picker-mcp
 ```
 
 这条路不需要任何服务器、任何账号。缺点只有一个：手机客户端启动不了你电脑上的进程，那边得用远程方式。
 
-> 为什么是 `github:` 而不是包名？因为 `kaomoji-mcp-server` 还没发到 npm（`kaomoji-mcp` 这个包名已被第三方占用，与本项目无关）。等发版之后就能简写成 `npx -y kaomoji-mcp-server`，在此之前 `github:` 形式完全等效。极端情况下若报 git 相关错误，装一下 git（macOS 装 Xcode 命令行工具即可），或者退回下面的源码方式。
+> 为什么是 `github:` 而不是包名？因为 `kaomoji-picker-mcp` 还没发到 npm。npm 上那个叫 `kaomoji-mcp` 的包是**另一个项目**（frankunderwood-w，只有 61 条 ASCII 符号、GPL 协议），与本项目无关——本仓库正是为了避开它才改名为 `kaomoji-picker-mcp`。等发版之后就能简写成 `npx -y kaomoji-picker-mcp`，在此之前 `github:` 形式完全等效。极端情况下若报 git 相关错误，装一下 git（macOS 装 Xcode 命令行工具即可），或者退回下面的源码方式。
 
 ### ② 远程 —— 部署一个自己的实例
 
@@ -162,16 +162,16 @@ curl -o /dev/null -w "%{http_code}\n" https://<你的项目>.vercel.app/health
 ### ③ 自己的机器 —— Docker 或源码
 
 ```bash
-docker build -t kaomoji-mcp .
-docker run -p 8080:8080 kaomoji-mcp
+docker build -t kaomoji-picker-mcp .
+docker run -p 8080:8080 kaomoji-picker-mcp
 # → http://127.0.0.1:8080/mcp
 ```
 
 或者不装 Docker：
 
 ```bash
-git clone https://github.com/zyeonheenim/kaomoji-mcp.git
-cd kaomoji-mcp
+git clone https://github.com/zyeonheenim/kaomoji-picker-mcp.git
+cd kaomoji-picker-mcp
 node src/index.mjs                 # stdio
 node src/index.mjs --http          # HTTP，默认 0.0.0.0:8790
 node src/index.mjs --http --port 9000 --host 127.0.0.1
@@ -235,7 +235,7 @@ Cloudflare 想省掉装 wrangler 的话：`npm run build` 会生成 `dist/worker
 
 ## 开发
 
-[![CI](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-mcp/actions/workflows/ci.yml)
+[![CI](https://github.com/zyeonheenim/kaomoji-picker-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/zyeonheenim/kaomoji-picker-mcp/actions/workflows/ci.yml)
 
 ```bash
 npm run build   # vendor/kaomoji.json → src/data.b64.mjs（+ dist/worker.js）

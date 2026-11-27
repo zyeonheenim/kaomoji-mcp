@@ -5,7 +5,7 @@
 # 低频调用够用，在意首字延迟的话自己升到付费档或换平台。
 services:
   - type: web
-    name: kaomoji-mcp
+    name: kaomoji-picker-mcp
     runtime: docker
     plan: free
     healthCheckPath: /health

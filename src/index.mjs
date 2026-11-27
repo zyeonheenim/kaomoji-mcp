@@ -15,7 +15,7 @@ import os from 'node:os';
 import { checkToken, dispatch, ready, homePage, jsonResponse, CORS, STATS, VERSION } from './core.mjs';
 
 const TOKEN = process.env.MCP_TOKEN || '';
-const REPO = 'https://github.com/zyeonheenim/kaomoji-mcp';
+const REPO = 'https://github.com/zyeonheenim/kaomoji-picker-mcp';
 
 /* ---------------------------------------------------------------- stdio */
 
@@ -31,7 +31,7 @@ async function runStdio() {
     try {
       msg = JSON.parse(s);
     } catch {
-      process.stderr.write('[kaomoji-mcp] 收到非 JSON 行，已忽略\n');
+      process.stderr.write('[kaomoji-picker-mcp] 收到非 JSON 行，已忽略\n');
       return;
     }
     for (const m of Array.isArray(msg) ? msg : [msg]) {
@@ -41,7 +41,7 @@ async function runStdio() {
   });
 
   rl.on('close', () => process.exit(0));
-  process.stderr.write(`[kaomoji-mcp] v${VERSION} stdio 就绪，${STATS.total} 条颜文字待命\n`);
+  process.stderr.write(`[kaomoji-picker-mcp] v${VERSION} stdio 就绪，${STATS.total} 条颜文字待命\n`);
 }
 
 /* ----------------------------------------------------------------- HTTP */
@@ -174,7 +174,7 @@ async function runHttp(port, host) {
       }
     }
     process.stderr.write(
-      `[kaomoji-mcp] v${VERSION} HTTP 就绪，${STATS.total} 条颜文字\n` +
+      `[kaomoji-picker-mcp] v${VERSION} HTTP 就绪，${STATS.total} 条颜文字\n` +
         addrs.map((a) => `   ${a}`).join('\n') +
         `\n   端点：POST /mcp（Streamable HTTP）· GET /sse（老式 SSE）\n` +
         (TOKEN ? '   已启用 token 校验\n' : '   未设 MCP_TOKEN，同网段可直接访问\n')
@@ -182,7 +182,7 @@ async function runHttp(port, host) {
   });
 
   server.on('error', (e) => {
-    process.stderr.write(`[kaomoji-mcp] 启动失败：${e.message}\n`);
+    process.stderr.write(`[kaomoji-picker-mcp] 启动失败：${e.message}\n`);
     process.exit(1);
   });
 }
@@ -197,7 +197,7 @@ const flag = (name, fallback) => {
 
 // 启动失败（比如数据解压不出来）要说清楚原因，别无声退出
 const fatal = (e) => {
-  process.stderr.write(`[kaomoji-mcp] 启动失败：${e.message}\n`);
+  process.stderr.write(`[kaomoji-picker-mcp] 启动失败：${e.message}\n`);
   process.exit(1);
 };
 
